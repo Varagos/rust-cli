@@ -13,6 +13,7 @@ Do **not** bump the CLI version in random feature PRs unless that PR is intended
 ## 2. Decide to cut a release
 
 Cut a release only when:
+
 - Desired PRs are already merged to `main`
 - `main` is green
 - You want a new public binary version
@@ -36,6 +37,7 @@ git pull --ff-only origin main
 ```
 
 What the script does:
+
 - Reads `bitloops_cli/Cargo.toml` version
 - Creates tag `vX.Y.Z`
 - Pushes the tag only (never pushes `main`)
@@ -45,6 +47,7 @@ What the script does:
 Watch `.github/workflows/release.yml` for the tag run.
 
 Success criteria:
+
 - GitHub Release is created
 - Artifacts are attached:
   - `bitloops-aarch64-apple-darwin.tar.gz`
@@ -57,20 +60,23 @@ Success criteria:
 ## 6. Quick install checks
 
 macOS/Linux:
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bitloops/cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Varagos/rust-cli/main/install.sh | bash
 bitloops --version
 ```
 
 Windows (PowerShell):
+
 ```powershell
-irm https://raw.githubusercontent.com/bitloops/cli/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/Varagos/rust-cli/main/install.ps1 | iex
 bitloops --version
 ```
 
 ## 7. Rollback rule
 
 If release is bad:
+
 1. Delete GitHub Release + tag
 2. Fix forward
 3. Publish a new patch tag (for example `vX.Y.(Z+1)`)
