@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="${BITLOOPS_REPO:-bitloops/cli}"
-INSTALL_DIR="${BITLOOPS_INSTALL_DIR:-/usr/local/bin}"
+REPO="Varagos/rust-cli"
+INSTALL_DIR="/usr/local/bin"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -63,7 +63,8 @@ CHECKSUMS_FILE="checksums-sha256.txt"
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
 echo "Resolving latest release for ${REPO}..."
-TAG="$(curl -fsSL -H "User-Agent: bitloops-installer" "$API_URL" | awk -F'"' '/"tag_name":/ {print $4; exit}')"
+RELEASE_JSON="$(curl -fsSL -H "User-Agent: bitloops-installer" "$API_URL")"
+TAG="$(printf "%s" "$RELEASE_JSON" | tr -d '\n' | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
 
 if [[ -z "${TAG}" ]]; then
   echo "Error: could not resolve latest release tag from ${API_URL}" >&2
