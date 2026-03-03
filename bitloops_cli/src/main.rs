@@ -6,9 +6,10 @@ fn main() {
 
     match command.as_deref() {
         Some("hello") => println!("world"),
+        Some("ping") => println!("pong"),
         Some("--version") => println!("{}", env!("CARGO_PKG_VERSION")),
         _ => {
-            eprintln!("Usage: bitloops <hello|--version>");
+            eprintln!("Usage: bitloops <hello|ping|--version>");
             exit(1);
         }
     }
