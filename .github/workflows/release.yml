@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 permissions:
   contents: write
@@ -22,6 +22,8 @@ jobs:
             target: x86_64-apple-darwin
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-msvc
 
@@ -33,15 +35,27 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install musl-tools
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+        if: contains(matrix.target, 'unknown-linux-musl')
         run: sudo apt-get install -y musl-tools
+
+      - name: Configure Linux arm64 linker
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=rust-lld" >> "$GITHUB_ENV"
+
+      - name: Install qemu for Linux arm64 smoke test
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: sudo apt-get install -y qemu-user
 
       - name: Build
         run: cargo build --release --manifest-path bitloops_cli/Cargo.toml --target ${{ matrix.target }}
 
       - name: Smoke test (Unix)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.target != 'aarch64-unknown-linux-musl'
         run: ./bitloops_cli/target/${{ matrix.target }}/release/bitloops --version
+
+      - name: Smoke test (Linux arm64 via qemu)
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: qemu-aarch64 ./bitloops_cli/target/${{ matrix.target }}/release/bitloops --version
 
       - name: Smoke test (Windows)
         if: runner.os == 'Windows'
@@ -108,6 +122,7 @@ jobs:
             bitloops-aarch64-apple-darwin.tar.gz
             bitloops-x86_64-apple-darwin.tar.gz
             bitloops-x86_64-unknown-linux-musl.tar.gz
+            bitloops-aarch64-unknown-linux-musl.tar.gz
             bitloops-x86_64-pc-windows-msvc.zip
             checksums-sha256.txt
           )
@@ -127,3 +142,12 @@ jobs:
           tar -xzf bitloops-x86_64-unknown-linux-musl.tar.gz
           chmod +x bitloops
           ./bitloops --version
+
+      - name: Smoke test linux arm64 release binary via qemu
+        run: |
+          sudo apt-get install -y qemu-user
+          cd verify
+          mkdir -p arm64
+          tar -xzf bitloops-aarch64-unknown-linux-musl.tar.gz -C arm64
+          chmod +x arm64/bitloops
+          qemu-aarch64 arm64/bitloops --version
