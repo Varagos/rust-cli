@@ -15,7 +15,7 @@ if errorlevel 1 exit /b 1
 call :require_cmd curl
 if errorlevel 1 exit /b 1
 
-call :require_cmd certutil
+call :detect_hash_tools
 if errorlevel 1 exit /b 1
 
 call :require_cmd tar
@@ -176,6 +176,22 @@ if errorlevel 1 (
 )
 exit /b 0
 
+:detect_hash_tools
+set "HAS_POWERSHELL=0"
+set "HAS_CERTUTIL=0"
+
+where powershell >nul 2>&1
+if not errorlevel 1 set "HAS_POWERSHELL=1"
+
+where certutil >nul 2>&1
+if not errorlevel 1 set "HAS_CERTUTIL=1"
+
+if "%HAS_POWERSHELL%%HAS_CERTUTIL%"=="00" (
+  echo Error: required hash tool not found: powershell or certutil >&2
+  exit /b 1
+)
+exit /b 0
+
 :download_file
 set "URL=%~1"
 set "OUTPUT=%~2"
@@ -207,18 +223,51 @@ exit /b 0
 :compute_sha256
 set "FILE_PATH=%~1"
 set "ACTUAL_HASH="
-for /f "skip=1 tokens=* delims=" %%i in ('certutil -hashfile "%FILE_PATH%" SHA256 ^| findstr /r /v /c:"^SHA256 hash of" /c:"^CertUtil:" /c:"^$"') do (
-  set "ACTUAL_HASH=%%i"
-  goto :hash_found
-)
 
-:hash_found
-if not defined ACTUAL_HASH (
-  echo Error: failed to compute SHA256 for %FILE_PATH% >&2
+if "%HAS_POWERSHELL%"=="1" call :hash_with_powershell "%FILE_PATH%"
+if defined ACTUAL_HASH goto :hash_done
+
+if "%HAS_CERTUTIL%"=="1" call :hash_with_certutil "%FILE_PATH%"
+if defined ACTUAL_HASH goto :hash_done
+
+echo Error: failed to compute SHA256 for %FILE_PATH% >&2
+exit /b 1
+
+:hash_done
+set "ACTUAL_HASH=%ACTUAL_HASH: =%"
+exit /b 0
+
+:hash_with_powershell
+for /f "usebackq tokens=* delims=" %%i in (`powershell -NoProfile -Command "$ErrorActionPreference='Stop'; (Get-FileHash -LiteralPath \"%~1\" -Algorithm SHA256).Hash.ToLowerInvariant()" 2^>nul`) do (
+  set "ACTUAL_HASH=%%i"
+  exit /b 0
+)
+exit /b 1
+
+:hash_with_certutil
+set "HASH_OUTPUT=%TMP_DIR%\hash_output.txt"
+set "LINE_COUNT=0"
+
+certutil -hashfile "%~1" SHA256 > "%HASH_OUTPUT%" 2>nul
+if errorlevel 1 (
   exit /b 1
 )
 
-set "ACTUAL_HASH=%ACTUAL_HASH: =%"
+for /f "usebackq tokens=* delims=" %%i in ("%HASH_OUTPUT%") do (
+  set /a LINE_COUNT+=1
+  if !LINE_COUNT!==2 set "ACTUAL_HASH=%%i"
+)
+
+if not defined ACTUAL_HASH (
+  exit /b 1
+)
+
+echo(!ACTUAL_HASH! | findstr /r /i "^[0-9A-F][0-9A-F ]*$" >nul
+if errorlevel 1 (
+  set "ACTUAL_HASH="
+  exit /b 1
+)
+
 exit /b 0
 
 :ensure_user_path
