@@ -53,9 +53,11 @@ Success criteria:
   - `bitloops-aarch64-apple-darwin.tar.gz`
   - `bitloops-x86_64-apple-darwin.tar.gz`
   - `bitloops-x86_64-unknown-linux-musl.tar.gz`
+  - `bitloops-aarch64-unknown-linux-musl.tar.gz`
   - `bitloops-x86_64-pc-windows-msvc.zip`
+  - `bitloops-aarch64-pc-windows-msvc.zip`
   - `checksums-sha256.txt`
-- Verify job passes (downloads assets from release, checksums, Linux smoke run)
+- Verify job passes (downloads release assets, validates checksums, and runs Linux smoke tests)
 
 ## 6. Quick install checks
 
@@ -70,6 +72,14 @@ Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/Varagos/rust-cli/main/install.ps1 | iex
+bitloops --version
+```
+
+Windows (`cmd.exe`):
+
+```bat
+curl -fsSL -o install.cmd https://raw.githubusercontent.com/Varagos/rust-cli/main/install.cmd
+install.cmd
 bitloops --version
 ```
 
